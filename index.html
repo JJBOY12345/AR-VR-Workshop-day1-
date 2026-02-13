@@ -3,43 +3,106 @@
 <head>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    /* Top menu like tabs */
+    .menu {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 10px;
+    }
+
+    .menu button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2979ff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .menu button:hover {
+      background: #1c54b2;
+    }
+  </style>
 </head>
 
 <body style="margin:0; overflow:hidden;">
 
-<a-scene
-  embedded
-  arjs="sourceType: webcam; debugUIEnabled: false;"
-  renderer="antialias: true;"
->
+<!-- Shape selector -->
+<div class="menu">
+  <button onclick="setShape('box')">Cube</button>
+  <button onclick="setShape('sphere')">Sphere</button>
+  <button onclick="setShape('cylinder')">Cylinder</button>
+  <button onclick="setShape('torus')">Torus</button>
+</div>
 
-  <!-- Lighting for realism -->
+<a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+
+  <!-- Lighting -->
   <a-light type="ambient" intensity="0.6"></a-light>
-  <a-light type="directional" position="1 2 1" intensity="1"></a-light>
+  <a-light type="directional" position="1 2 1"></a-light>
 
-  <!-- Hiro marker -->
+  <!-- Marker -->
   <a-marker preset="hiro">
 
-    <!-- Smaller polished blue cube -->
-    <a-box
-      position="0 0.25 0"
-      scale="0.5 0.5 0.5"
-      material="
-        color: #2979ff;
-        metalness: 0.5;
-        roughness: 0.3;
-        emissive: #001a33;
-      "
-      animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear"
-      shadow>
-    </a-box>
+    <!-- Shape container (we change this dynamically) -->
+    <a-entity id="shapeContainer"></a-entity>
 
   </a-marker>
 
-  <!-- Camera -->
   <a-entity camera></a-entity>
-
 </a-scene>
+
+<script>
+const container = document.querySelector('#shapeContainer')
+
+function setShape(type) {
+
+  // remove old shape
+  container.innerHTML = ""
+
+  let shape
+
+  if (type === "box") {
+    shape = document.createElement("a-box")
+    shape.setAttribute("scale", "0.5 0.5 0.5")
+  }
+
+  if (type === "sphere") {
+    shape = document.createElement("a-sphere")
+    shape.setAttribute("radius", "0.3")
+  }
+
+  if (type === "cylinder") {
+    shape = document.createElement("a-cylinder")
+    shape.setAttribute("radius", "0.25")
+    shape.setAttribute("height", "0.5")
+  }
+
+  if (type === "torus") {
+    shape = document.createElement("a-torus")
+    shape.setAttribute("radius", "0.3")
+    shape.setAttribute("radius-tubular", "0.08")
+  }
+
+  // shared styling
+  shape.setAttribute("position", "0 0.3 0")
+  shape.setAttribute("color", "#2979ff")
+  shape.setAttribute("animation",
+    "property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear")
+
+  container.appendChild(shape)
+}
+
+// default shape
+setShape("box")
+</script>
 
 </body>
 </html>
