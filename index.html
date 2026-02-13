@@ -1,52 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- A-Frame core -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-  <!-- AR.js for A-Frame -->
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <!-- WebXR hit test component -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-hit-test-component@3.1.0/dist/aframe-hit-test-component.min.js"></script>
 </head>
 
 <body style="margin:0; overflow:hidden;">
 
-  <!-- AR Scene -->
-  <a-scene
-    embedded
-    arjs="sourceType: webcam; debugUIEnabled: false;"
-    renderer="logarithmicDepthBuffer: true;"
-  >
+<a-scene
+  renderer="colorManagement: true"
+  vr-mode-ui="enabled: false"
+  xrweb="requiredFeatures: hit-test, local-floor"
+>
 
-    <!-- Lighting -->
-    <a-light type="ambient" intensity="0.6"></a-light>
-    <a-light type="directional"
-             position="1 2 1"
-             intensity="1"
-             castShadow="true">
-    </a-light>
+  <!-- Lighting -->
+  <a-light type="ambient" intensity="0.7"></a-light>
+  <a-light type="directional" position="1 2 1"></a-light>
 
-    <!-- Polished floating cube -->
-    <a-box
-      position="0 0 -1"
-      depth="0.4"
-      height="0.4"
-      width="0.4"
-      material="
-        color: #ff4444;
-        metalness: 0.6;
-        roughness: 0.2;
-        emissive: #330000;
-      "
-      shadow="cast: true"
-      animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear"
-      animation__float="property: position; dir: alternate; dur: 2000; loop: true; to: 0 0.2 -1"
-    >
-    </a-box>
+  <!-- Camera with surface detection -->
+  <a-entity
+    camera
+    look-controls
+    hit-test="target:#cube; type: footprint; offset: 0 0 0">
+  </a-entity>
 
-    <!-- Camera -->
-    <a-entity camera></a-entity>
+  <!-- Placement indicator -->
+  <a-ring
+    rotation="-90 0 0"
+    radius-inner="0.08"
+    radius-outer="0.1"
+    color="white"
+    visible="false"
+    id="reticle">
+  </a-ring>
 
-  </a-scene>
+  <!-- Small blue cube -->
+  <a-box
+    id="cube"
+    scale="0.15 0.15 0.15"
+    color="blue"
+    visible="false"
+    shadow>
+  </a-box>
+
+</a-scene>
+
+<script>
+const reticle = document.querySelector('#reticle')
+const cube = document.querySelector('#cube')
+
+document.querySelector('a-scene').addEventListener('enter-vr', () => {
+  reticle.setAttribute('visible', true)
+})
+
+window.addEventListener('click', () => {
+  if (reticle.object3D.visible) {
+    cube.object3D.position.copy(reticle.object3D.position)
+    cube.setAttribute('visible', true)
+  }
+})
+</script>
 
 </body>
 </html>
