@@ -5,7 +5,6 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* Top menu like tabs */
     .menu {
       position: fixed;
       top: 10px;
@@ -25,34 +24,53 @@
       font-weight: bold;
       cursor: pointer;
     }
-
-    .menu button:hover {
-      background: #1c54b2;
-    }
   </style>
 </head>
 
 <body style="margin:0; overflow:hidden;">
 
-<!-- Shape selector -->
 <div class="menu">
-  <button onclick="setShape('box')">Cube</button>
-  <button onclick="setShape('sphere')">Sphere</button>
-  <button onclick="setShape('cylinder')">Cylinder</button>
-  <button onclick="setShape('torus')">Torus</button>
+  <button onclick="showShape('box')">Cube</button>
+  <button onclick="showShape('sphere')">Sphere</button>
+  <button onclick="showShape('cylinder')">Cylinder</button>
+  <button onclick="showShape('torus')">Torus</button>
 </div>
 
 <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
 
-  <!-- Lighting -->
   <a-light type="ambient" intensity="0.6"></a-light>
   <a-light type="directional" position="1 2 1"></a-light>
 
-  <!-- Marker -->
   <a-marker preset="hiro">
 
-    <!-- Shape container (we change this dynamically) -->
-    <a-entity id="shapeContainer"></a-entity>
+    <a-box id="box"
+      position="0 0.3 0"
+      scale="0.5 0.5 0.5"
+      color="#2979ff">
+    </a-box>
+
+    <a-sphere id="sphere"
+      position="0 0.3 0"
+      radius="0.3"
+      color="#2979ff"
+      visible="false">
+    </a-sphere>
+
+    <a-cylinder id="cylinder"
+      position="0 0.3 0"
+      radius="0.25"
+      height="0.5"
+      color="#2979ff"
+      visible="false">
+    </a-cylinder>
+
+    <a-torus id="torus"
+      position="0 0.3 0"
+      radius="0.3"
+      radius-tubular="0.08"
+      color="#2979ff"
+      visible="false">
+    </a-torus>
 
   </a-marker>
 
@@ -60,48 +78,16 @@
 </a-scene>
 
 <script>
-const container = document.querySelector('#shapeContainer')
+function showShape(name) {
 
-function setShape(type) {
+  const shapes = ['box','sphere','cylinder','torus']
 
-  // remove old shape
-  container.innerHTML = ""
+  shapes.forEach(id =>
+    document.getElementById(id).setAttribute('visible', false)
+  )
 
-  let shape
-
-  if (type === "box") {
-    shape = document.createElement("a-box")
-    shape.setAttribute("scale", "0.5 0.5 0.5")
-  }
-
-  if (type === "sphere") {
-    shape = document.createElement("a-sphere")
-    shape.setAttribute("radius", "0.3")
-  }
-
-  if (type === "cylinder") {
-    shape = document.createElement("a-cylinder")
-    shape.setAttribute("radius", "0.25")
-    shape.setAttribute("height", "0.5")
-  }
-
-  if (type === "torus") {
-    shape = document.createElement("a-torus")
-    shape.setAttribute("radius", "0.3")
-    shape.setAttribute("radius-tubular", "0.08")
-  }
-
-  // shared styling
-  shape.setAttribute("position", "0 0.3 0")
-  shape.setAttribute("color", "#2979ff")
-  shape.setAttribute("animation",
-    "property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear")
-
-  container.appendChild(shape)
+  document.getElementById(name).setAttribute('visible', true)
 }
-
-// default shape
-setShape("box")
 </script>
 
 </body>
