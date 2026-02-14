@@ -4,62 +4,192 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
-  <!--
-    VERSIONS: aframe 1.0.4 + AR.js master
-    This is the exact combo used in all official AR.js HTML button overlay examples.
-    Do NOT use aframe 1.4+ or 1.6+ with this AR.js build — it breaks entity init.
-  -->
   <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; }
 
-    /* Buttons sit in a plain HTML div OUTSIDE a-scene, z-indexed above the canvas */
-    #shape-menu {
+    /* ── Whole HUD wrapper ── */
+    #hud {
       position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: 0; left: 0; right: 0;
       z-index: 999;
       display: flex;
-      gap: 8px;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      pointer-events: none;   /* let taps fall through to AR canvas by default */
     }
 
-    #shape-menu button {
-      padding: 10px 18px;
-      font-size: 14px;
+    /* Every row inside HUD re-enables pointer events for itself */
+    .hud-row {
+      pointer-events: auto;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.55);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      box-sizing: border-box;
+    }
+
+    /* ── Shape buttons ── */
+    .shape-btn {
+      padding: 8px 16px;
+      font-size: 13px;
       font-weight: bold;
-      border: 2px solid white;
+      border: 2px solid rgba(255,255,255,0.5);
       border-radius: 8px;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0,0,0,0.5);
       color: white;
       cursor: pointer;
     }
 
-    #shape-menu button.active {
-      background: rgba(41, 121, 255, 0.85);
+    .shape-btn.active {
+      background: rgba(41,121,255,0.85);
       border-color: #2979ff;
+    }
+
+    /* ── Colour swatches ── */
+    .swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .swatch.active {
+      border-color: white;
+      transform: scale(1.2);
+    }
+
+    /* native colour picker — hidden, triggered by a swatch button */
+    #color-custom {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255,255,255,0.5);
+      background: none;
+      cursor: pointer;
+      padding: 0;
+      overflow: hidden;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    #color-custom::-webkit-color-swatch-wrapper { padding: 0; }
+    #color-custom::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+    /* ── Slider row ── */
+    #scale-row label {
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 130px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.25);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #2979ff;
+      cursor: pointer;
+    }
+
+    /* ── Rotation toggle ── */
+    #rot-btn {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      cursor: pointer;
+    }
+
+    #rot-btn.spinning {
+      border-color: #00e676;
+      color: #00e676;
     }
   </style>
 </head>
 <body>
 
-  <!-- UI lives OUTSIDE a-scene — always renders on top of the AR canvas -->
-  <div id="shape-menu">
-    <button id="btn-box"       class="active" onclick="showShape('box')">Cube</button>
-    <button id="btn-sphere"               onclick="showShape('sphere')">Sphere</button>
-    <button id="btn-cylinder"          onclick="showShape('cylinder')">Cylinder</button>
-    <button id="btn-torus"              onclick="showShape('torus')">Torus</button>
+  <div id="hud">
+
+    <!-- Row 1: Shape picker -->
+    <div class="hud-row">
+      <button class="shape-btn active" id="btn-box"      onclick="showShape('box')">Cube</button>
+      <button class="shape-btn"        id="btn-sphere"   onclick="showShape('sphere')">Sphere</button>
+      <button class="shape-btn"        id="btn-cylinder" onclick="showShape('cylinder')">Cylinder</button>
+      <button class="shape-btn"        id="btn-torus"    onclick="showShape('torus')">Torus</button>
+    </div>
+
+    <!-- Row 2: Colour swatches + custom picker -->
+    <div class="hud-row">
+      <div class="swatch active" style="background:#2979ff" onclick="setColor('#2979ff', this)"></div>
+      <div class="swatch"        style="background:#ff1744" onclick="setColor('#ff1744', this)"></div>
+      <div class="swatch"        style="background:#00e676" onclick="setColor('#00e676', this)"></div>
+      <div class="swatch"        style="background:#ffd740" onclick="setColor('#ffd740', this)"></div>
+      <div class="swatch"        style="background:#e040fb" onclick="setColor('#e040fb', this)"></div>
+      <div class="swatch"        style="background:#ffffff" onclick="setColor('#ffffff', this)"></div>
+      <!--
+        Native <input type="color"> gives a full OS colour wheel.
+        We style it as a circular swatch. On change, setColor() is called
+        with whatever hex the user picks — no extra library needed.
+      -->
+      <input
+        type="color"
+        id="color-custom"
+        value="#2979ff"
+        title="Custom colour"
+        oninput="setColor(this.value, this)"
+      >
+    </div>
+
+    <!-- Row 3: Scale slider + Rotation toggle -->
+    <div class="hud-row" id="scale-row">
+      <label for="scale-slider">Size</label>
+      <!--
+        oninput fires on every drag tick (not just on release),
+        so the shape resizes live as you drag.
+        value="0.5" matches the default scale="0.5 0.5 0.5" on the shapes.
+      -->
+      <input
+        type="range"
+        id="scale-slider"
+        min="0.1" max="1.2" step="0.01" value="0.5"
+        oninput="setScale(this.value)"
+      >
+      <!--
+        Rotation toggle: sets animation 'paused' property.
+        A-Frame's animation component exposes a 'paused' boolean
+        we can flip with setAttribute.
+      -->
+      <button id="rot-btn" class="spinning" onclick="toggleRotation()">⟳ Spin ON</button>
+    </div>
+
   </div>
 
-  <!--
-    KEY FIX: All shapes are declared in static HTML — NOT created at runtime.
-    AR.js builds its scene graph from the DOM at load time. Entities injected
-    later via createElement+appendChild often fail to attach to the marker's
-    three.js Object3D and simply never appear.
-    Pre-declare everything, then toggle visible="true/false" at click time.
-  -->
+  <!-- ─────────────────────────────────────────────────── -->
+  <!-- AR Scene                                            -->
+  <!-- ─────────────────────────────────────────────────── -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
 
     <a-marker preset="hiro">
@@ -77,6 +207,7 @@
         id="shape-sphere"
         position="0 0.3 0"
         radius="0.3"
+        scale="0.5 0.5 0.5"
         color="#2979ff"
         animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
         visible="false">
@@ -87,6 +218,7 @@
         position="0 0.3 0"
         radius="0.25"
         height="0.5"
+        scale="0.5 0.5 0.5"
         color="#2979ff"
         animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
         visible="false">
@@ -97,6 +229,7 @@
         position="0 0.3 0"
         radius="0.28"
         radius-tubular="0.08"
+        scale="0.5 0.5 0.5"
         color="#2979ff"
         animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
         visible="false">
@@ -109,24 +242,84 @@
   </a-scene>
 
   <script>
-    var shapes = ['box', 'sphere', 'cylinder', 'torus'];
+    var shapes   = ['box', 'sphere', 'cylinder', 'torus'];
+    var spinning = true;   // tracks rotation state
 
+    // ── Helpers ─────────────────────────────────────────
+
+    // Returns the currently visible shape element
+    function currentEl() {
+      for (var i = 0; i < shapes.length; i++) {
+        var el = document.getElementById('shape-' + shapes[i]);
+        if (el.getAttribute('visible') !== false &&
+            el.getAttribute('visible') !== 'false') {
+          return el;
+        }
+      }
+    }
+
+    // ── Shape switcher ───────────────────────────────────
     function showShape(name) {
       shapes.forEach(function(id) {
         var el  = document.getElementById('shape-' + id);
         var btn = document.getElementById('btn-' + id);
+        var isTarget = (id === name);
 
-        if (id === name) {
-          // setAttribute works reliably here because all entities were
-          // pre-created in HTML — A-Frame's component system is already
-          // fully initialised for each one before this is ever called.
-          el.setAttribute('visible', true);
-          btn.classList.add('active');
-        } else {
-          el.setAttribute('visible', false);
-          btn.classList.remove('active');
+        el.setAttribute('visible', isTarget);
+        btn.classList.toggle('active', isTarget);
+
+        // Keep rotation paused state in sync on the newly shown shape
+        if (isTarget) {
+          el.setAttribute('animation', 'paused', !spinning);
         }
       });
+    }
+
+    // ── Colour setter ────────────────────────────────────
+    function setColor(hex, swatchEl) {
+      // Update all shapes so switching shape keeps the chosen colour
+      shapes.forEach(function(id) {
+        var el = document.getElementById('shape-' + id);
+        // Two-argument setAttribute for multi-property components:
+        // setAttribute('componentName', 'propertyName', value)
+        el.setAttribute('material', 'color', hex);
+      });
+
+      // Update swatch highlight — only for the preset swatches (not the input)
+      document.querySelectorAll('.swatch').forEach(function(s) {
+        s.classList.remove('active');
+      });
+      if (swatchEl.classList && swatchEl.classList.contains('swatch')) {
+        swatchEl.classList.add('active');
+      }
+    }
+
+    // ── Scale slider ─────────────────────────────────────
+    function setScale(val) {
+      // val comes in as a string from the slider, convert to float
+      var s = parseFloat(val);
+      // Apply to all shapes so switching shape keeps the chosen size
+      shapes.forEach(function(id) {
+        var el = document.getElementById('shape-' + id);
+        // object3D.scale is the fast path recommended by A-Frame docs
+        // for transforms — avoids the setAttribute overhead
+        el.object3D.scale.set(s, s, s);
+      });
+    }
+
+    // ── Rotation toggle ──────────────────────────────────
+    function toggleRotation() {
+      spinning = !spinning;
+      var btn = document.getElementById('rot-btn');
+
+      shapes.forEach(function(id) {
+        var el = document.getElementById('shape-' + id);
+        // 'animation' is the component name; 'paused' is the property
+        el.setAttribute('animation', 'paused', !spinning);
+      });
+
+      btn.textContent = spinning ? '⟳ Spin ON' : '⏸ Spin OFF';
+      btn.classList.toggle('spinning', spinning);
     }
   </script>
 
