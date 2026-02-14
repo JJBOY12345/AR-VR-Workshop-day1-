@@ -1,94 +1,365 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Shape Selector</title>
+
+  <!--
+    FIX #1: Version pinning — AR.js 3.4.4 requires A-Frame 1.0.4.
+    Using mismatched versions (e.g. A-Frame 1.4.0 + AR.js master) silently breaks
+    entity initialization and setAttribute on child elements inside <a-marker>.
+  -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 
   <style>
-    .menu {
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: flex;
-      gap: 10px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
     }
 
-    .menu button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 8px;
-      background: #2979ff;
-      color: white;
-      font-weight: bold;
+    /* HUD overlay */
+    #hud {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      pointer-events: none;
+    }
+
+    #title-bar {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(0, 220, 255, 0.25);
+      padding: 10px 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: auto;
+    }
+
+    #title-bar span {
+      color: #00dcff;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    #status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 6px #00ff88;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Shape button strip */
+    #controls {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      width: 100%;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .shape-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 8px 14px 7px;
       cursor: pointer;
+      transition: all 0.18s ease;
+      color: rgba(255,255,255,0.55);
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      min-width: 62px;
+    }
+
+    .shape-btn svg {
+      opacity: 0.55;
+      transition: opacity 0.18s;
+    }
+
+    .shape-btn:hover {
+      background: rgba(0, 220, 255, 0.08);
+      border-color: rgba(0, 220, 255, 0.35);
+      color: #00dcff;
+    }
+
+    .shape-btn:hover svg { opacity: 0.9; }
+
+    .shape-btn.active {
+      background: rgba(0, 220, 255, 0.12);
+      border-color: #00dcff;
+      color: #00dcff;
+      box-shadow: 0 0 12px rgba(0,220,255,0.18);
+    }
+
+    .shape-btn.active svg { opacity: 1; }
+
+    /* Color row */
+    #color-strip {
+      display: flex;
+      gap: 7px;
+      padding: 8px 14px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      width: 100%;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .color-swatch {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover { transform: scale(1.2); }
+    .color-swatch.active { border-color: white; transform: scale(1.15); }
+
+    /* Info bar at bottom */
+    #info-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 8px 16px;
+      text-align: center;
+      color: rgba(255,255,255,0.4);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      z-index: 100;
     }
   </style>
 </head>
-
 <body style="margin:0; overflow:hidden;">
 
-<div class="menu">
-  <button onclick="showShape('box')">Cube</button>
-  <button onclick="showShape('sphere')">Sphere</button>
-  <button onclick="showShape('cylinder')">Cylinder</button>
-  <button onclick="showShape('torus')">Torus</button>
-</div>
+  <!-- HUD -->
+  <div id="hud">
+    <div id="title-bar">
+      <span>AR Shape Viewer</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:9px;opacity:0.5;">HIRO MARKER</span>
+        <div id="status-dot"></div>
+      </div>
+    </div>
 
-<a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <div id="controls">
+      <!-- Cube -->
+      <button class="shape-btn active" onclick="showShape('box')" id="btn-box">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="6" width="9" height="9" rx="0.5"/>
+          <path d="M3 6 L7 2 L16 2 L16 11 L12 15"/>
+          <line x1="7" y1="2" x2="7" y2="11"/>
+          <line x1="7" y1="11" x2="16" y2="11"/>
+        </svg>
+        Cube
+      </button>
+      <!-- Sphere -->
+      <button class="shape-btn" onclick="showShape('sphere')" id="btn-sphere">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="9" r="7"/>
+          <ellipse cx="9" cy="9" rx="3.5" ry="7"/>
+          <line x1="2" y1="9" x2="16" y2="9"/>
+        </svg>
+        Sphere
+      </button>
+      <!-- Cylinder -->
+      <button class="shape-btn" onclick="showShape('cylinder')" id="btn-cylinder">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <ellipse cx="9" cy="5" rx="6" ry="2.2"/>
+          <ellipse cx="9" cy="13" rx="6" ry="2.2"/>
+          <line x1="3" y1="5" x2="3" y2="13"/>
+          <line x1="15" y1="5" x2="15" y2="13"/>
+        </svg>
+        Cylinder
+      </button>
+      <!-- Torus -->
+      <button class="shape-btn" onclick="showShape('torus')" id="btn-torus">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <ellipse cx="9" cy="9" rx="6.5" ry="3.2"/>
+          <ellipse cx="9" cy="9" rx="2.8" ry="1.3"/>
+        </svg>
+        Torus
+      </button>
+      <!-- Cone -->
+      <button class="shape-btn" onclick="showShape('cone')" id="btn-cone">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 2 L15 14"/>
+          <path d="M9 2 L3 14"/>
+          <ellipse cx="9" cy="14" rx="6" ry="1.8"/>
+        </svg>
+        Cone
+      </button>
+    </div>
 
-  <a-light type="ambient" intensity="0.6"></a-light>
-  <a-light type="directional" position="1 2 1"></a-light>
+    <div id="color-strip">
+      <div class="color-swatch active" style="background:#2979ff" onclick="setColor('#2979ff',this)" title="Electric Blue"></div>
+      <div class="color-swatch" style="background:#00e5ff" onclick="setColor('#00e5ff',this)" title="Cyan"></div>
+      <div class="color-swatch" style="background:#00e676" onclick="setColor('#00e676',this)" title="Green"></div>
+      <div class="color-swatch" style="background:#ff6d00" onclick="setColor('#ff6d00',this)" title="Orange"></div>
+      <div class="color-swatch" style="background:#e040fb" onclick="setColor('#e040fb',this)" title="Purple"></div>
+      <div class="color-swatch" style="background:#ff1744" onclick="setColor('#ff1744',this)" title="Red"></div>
+      <div class="color-swatch" style="background:#ffd740" onclick="setColor('#ffd740',this)" title="Gold"></div>
+      <div class="color-swatch" style="background:#ffffff" onclick="setColor('#ffffff',this)" title="White"></div>
+    </div>
+  </div>
 
-  <a-marker preset="hiro">
+  <!--
+    FIX #2: Use A-Frame 1.6 + AR.js 3.4.7 (matched versions).
+    FIX #3: All shapes start with visible="false" except box.
+    FIX #4: Shape switching is done via object3D.visible (three.js level),
+            NOT setAttribute('visible', ...) — AR.js overwrites the DOM
+            visible attribute on marker children every render frame,
+            making DOM-level toggles unreliable.
+  -->
+  <a-scene
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 4x4_BCH_13_9_3;"
+    vr-mode-ui="enabled: false;"
+    renderer="antialias: true; logarithmicDepthBuffer: true;"
+  >
+    <a-light type="ambient" intensity="0.7"></a-light>
+    <a-light type="directional" position="2 4 2" intensity="1.1" castShadow="true"></a-light>
+    <a-light type="point" position="-2 3 -2" intensity="0.4" color="#00dcff"></a-light>
 
-    <a-box id="box"
-      position="0 0.3 0"
-      scale="0.5 0.5 0.5"
-      color="#2979ff">
-    </a-box>
+    <a-marker preset="hiro">
+      <!-- Each shape wrapped in an a-entity for cleaner group control -->
 
-    <a-sphere id="sphere"
-      position="0 0.3 0"
-      radius="0.3"
-      color="#2979ff"
-      visible="false">
-    </a-sphere>
+      <a-box id="shape-box"
+        position="0 0.3 0"
+        scale="0.5 0.5 0.5"
+        material="color: #2979ff; metalness: 0.4; roughness: 0.3; emissive: #000d1a;"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear">
+      </a-box>
 
-    <a-cylinder id="cylinder"
-      position="0 0.3 0"
-      radius="0.25"
-      height="0.5"
-      color="#2979ff"
-      visible="false">
-    </a-cylinder>
+      <a-sphere id="shape-sphere"
+        position="0 0.35 0"
+        radius="0.3"
+        material="color: #2979ff; metalness: 0.4; roughness: 0.3; emissive: #000d1a;"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+        visible="false">
+      </a-sphere>
 
-    <a-torus id="torus"
-      position="0 0.3 0"
-      radius="0.3"
-      radius-tubular="0.08"
-      color="#2979ff"
-      visible="false">
-    </a-torus>
+      <a-cylinder id="shape-cylinder"
+        position="0 0.3 0"
+        radius="0.22"
+        height="0.5"
+        material="color: #2979ff; metalness: 0.4; roughness: 0.3; emissive: #000d1a;"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+        visible="false">
+      </a-cylinder>
 
-  </a-marker>
+      <a-torus id="shape-torus"
+        position="0 0.3 0"
+        radius="0.28"
+        radius-tubular="0.07"
+        material="color: #2979ff; metalness: 0.4; roughness: 0.3; emissive: #000d1a;"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+        visible="false">
+      </a-torus>
 
-  <a-entity camera></a-entity>
-</a-scene>
+      <!-- A-Frame has no <a-cone>: use cylinder with radiusBottom=0 -->
+      <a-cylinder id="shape-cone"
+        position="0 0.3 0"
+        radius-bottom="0.28"
+        radius-top="0.001"
+        height="0.55"
+        material="color: #2979ff; metalness: 0.4; roughness: 0.3; emissive: #000d1a;"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+        visible="false">
+      </a-cylinder>
+    </a-marker>
 
-<script>
-function showShape(name) {
+    <a-entity camera></a-entity>
+  </a-scene>
 
-  const shapes = ['box','sphere','cylinder','torus']
+  <div id="info-bar">Point camera at HIRO marker · Choose a shape and colour above</div>
 
-  shapes.forEach(id =>
-    document.getElementById(id).setAttribute('visible', false)
-  )
+  <script>
+    // ─── State ───────────────────────────────────────────────────────────────
+    const SHAPES = ['box', 'sphere', 'cylinder', 'torus', 'cone'];
+    let currentShape = 'box';
+    let currentColor = '#2979ff';
 
-  document.getElementById(name).setAttribute('visible', true)
-}
-</script>
+    // ─── FIX: Toggle via object3D.visible, NOT setAttribute ─────────────────
+    // AR.js controls its child entities' object3D.visible each frame.
+    // Toggling at the three.js Object3D level directly is reliable because
+    // it happens at a lower level than AR.js's own marker-visible override.
+    function showShape(name) {
+      currentShape = name;
+
+      SHAPES.forEach(id => {
+        const el = document.getElementById('shape-' + id);
+        if (!el) return;
+
+        if (id === name) {
+          // Set both: object3D for immediate effect, setAttribute for DOM sync
+          el.object3D.visible = true;
+          el.setAttribute('visible', true);
+        } else {
+          el.object3D.visible = false;
+          el.setAttribute('visible', false);
+        }
+
+        // Update button states
+        const btn = document.getElementById('btn-' + id);
+        if (btn) btn.classList.toggle('active', id === name);
+      });
+    }
+
+    function setColor(hex, swatch) {
+      currentColor = hex;
+
+      // Update all shapes' material colours
+      SHAPES.forEach(id => {
+        const el = document.getElementById('shape-' + id);
+        if (el) {
+          el.setAttribute('material', 'color', hex);
+        }
+      });
+
+      // Update swatch UI
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+    }
+
+    // ─── Wait for scene to be ready before any DOM queries ──────────────────
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      console.log('AR scene loaded — shape switcher ready.');
+      // Ensure initial state is correct once A-Frame has initialised all entities
+      showShape('box');
+    });
+  </script>
 
 </body>
 </html>
