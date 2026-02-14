@@ -10,7 +10,6 @@
   <style>
     body { margin: 0; overflow: hidden; }
 
-    /* ── Whole HUD wrapper ── */
     #hud {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -18,11 +17,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0;
-      pointer-events: none;   /* let taps fall through to AR canvas by default */
+      pointer-events: none;
     }
 
-    /* Every row inside HUD re-enables pointer events for itself */
     .hud-row {
       pointer-events: auto;
       width: 100%;
@@ -31,7 +28,7 @@
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
-      background: rgba(0, 0, 0, 0.55);
+      background: rgba(0,0,0,0.55);
       border-bottom: 1px solid rgba(255,255,255,0.08);
       box-sizing: border-box;
     }
@@ -47,7 +44,6 @@
       color: white;
       cursor: pointer;
     }
-
     .shape-btn.active {
       background: rgba(41,121,255,0.85);
       border-color: #2979ff;
@@ -55,23 +51,20 @@
 
     /* ── Colour swatches ── */
     .swatch {
-      width: 26px;
-      height: 26px;
+      width: 26px; height: 26px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
       flex-shrink: 0;
     }
-
     .swatch.active {
       border-color: white;
       transform: scale(1.2);
     }
 
-    /* native colour picker — hidden, triggered by a swatch button */
+    /* Native colour wheel — styled as a round swatch */
     #color-custom {
-      width: 26px;
-      height: 26px;
+      width: 26px; height: 26px;
       border-radius: 50%;
       border: 2px dashed rgba(255,255,255,0.5);
       background: none;
@@ -81,12 +74,11 @@
       -webkit-appearance: none;
       appearance: none;
     }
-
     #color-custom::-webkit-color-swatch-wrapper { padding: 0; }
     #color-custom::-webkit-color-swatch { border: none; border-radius: 50%; }
 
     /* ── Slider row ── */
-    #scale-row label {
+    .hud-row label {
       color: rgba(255,255,255,0.75);
       font-size: 12px;
       white-space: nowrap;
@@ -94,18 +86,15 @@
 
     input[type=range] {
       -webkit-appearance: none;
-      width: 130px;
-      height: 4px;
+      width: 130px; height: 4px;
       border-radius: 2px;
       background: rgba(255,255,255,0.25);
       outline: none;
       cursor: pointer;
     }
-
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       border-radius: 50%;
       background: #2979ff;
       cursor: pointer;
@@ -122,7 +111,6 @@
       color: white;
       cursor: pointer;
     }
-
     #rot-btn.spinning {
       border-color: #00e676;
       color: #00e676;
@@ -141,65 +129,54 @@
       <button class="shape-btn"        id="btn-torus"    onclick="showShape('torus')">Torus</button>
     </div>
 
-    <!-- Row 2: Colour swatches + custom picker -->
+    <!-- Row 2: Colour swatches + full colour wheel -->
     <div class="hud-row">
-      <div class="swatch active" style="background:#2979ff" onclick="setColor('#2979ff', this)"></div>
-      <div class="swatch"        style="background:#ff1744" onclick="setColor('#ff1744', this)"></div>
-      <div class="swatch"        style="background:#00e676" onclick="setColor('#00e676', this)"></div>
-      <div class="swatch"        style="background:#ffd740" onclick="setColor('#ffd740', this)"></div>
-      <div class="swatch"        style="background:#e040fb" onclick="setColor('#e040fb', this)"></div>
-      <div class="swatch"        style="background:#ffffff" onclick="setColor('#ffffff', this)"></div>
-      <!--
-        Native <input type="color"> gives a full OS colour wheel.
-        We style it as a circular swatch. On change, setColor() is called
-        with whatever hex the user picks — no extra library needed.
-      -->
-      <input
-        type="color"
-        id="color-custom"
-        value="#2979ff"
-        title="Custom colour"
-        oninput="setColor(this.value, this)"
-      >
+      <div class="swatch active" style="background:#2979ff" onclick="setColor('#2979ff',this)"></div>
+      <div class="swatch"        style="background:#ff1744" onclick="setColor('#ff1744',this)"></div>
+      <div class="swatch"        style="background:#00e676" onclick="setColor('#00e676',this)"></div>
+      <div class="swatch"        style="background:#ffd740" onclick="setColor('#ffd740',this)"></div>
+      <div class="swatch"        style="background:#e040fb" onclick="setColor('#e040fb',this)"></div>
+      <div class="swatch"        style="background:#ffffff" onclick="setColor('#ffffff',this)"></div>
+      <input type="color" id="color-custom" value="#2979ff" title="Custom colour"
+             oninput="setColor(this.value, this)">
     </div>
 
     <!-- Row 3: Scale slider + Rotation toggle -->
-    <div class="hud-row" id="scale-row">
+    <div class="hud-row">
       <label for="scale-slider">Size</label>
-      <!--
-        oninput fires on every drag tick (not just on release),
-        so the shape resizes live as you drag.
-        value="0.5" matches the default scale="0.5 0.5 0.5" on the shapes.
-      -->
-      <input
-        type="range"
-        id="scale-slider"
-        min="0.1" max="1.2" step="0.01" value="0.5"
-        oninput="setScale(this.value)"
-      >
-      <!--
-        Rotation toggle: sets animation 'paused' property.
-        A-Frame's animation component exposes a 'paused' boolean
-        we can flip with setAttribute.
-      -->
+      <input type="range" id="scale-slider"
+             min="0.1" max="1.2" step="0.01" value="0.5"
+             oninput="setScale(this.value)">
       <button id="rot-btn" class="spinning" onclick="toggleRotation()">⟳ Spin ON</button>
     </div>
 
   </div>
 
-  <!-- ─────────────────────────────────────────────────── -->
-  <!-- AR Scene                                            -->
-  <!-- ─────────────────────────────────────────────────── -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
 
     <a-marker preset="hiro">
+
+      <!--
+        FIX: Use pauseEvents and resumeEvents instead of setAttribute('animation','paused',...).
+
+        The bug: setAttribute on the animation component goes through A-Frame's
+        diff system. If the value hasn't changed (e.g. paused=false → paused=false),
+        A-Frame treats it as a duplicate and the animation component never sees it.
+        This is why rotation broke permanently after the first toggle.
+
+        The fix: declare pauseEvents and resumeEvents on the animation upfront.
+        Then control it with el.emit('pauseAnim') / el.emit('playAnim').
+        emit() bypasses the diff system entirely — the event always fires,
+        so the animation always responds correctly.
+      -->
 
       <a-box
         id="shape-box"
         position="0 0.25 0"
         scale="0.5 0.5 0.5"
         color="#2979ff"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear;
+                   pauseEvents: pauseAnim; resumeEvents: playAnim"
         visible="true">
       </a-box>
 
@@ -209,7 +186,8 @@
         radius="0.3"
         scale="0.5 0.5 0.5"
         color="#2979ff"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear;
+                   pauseEvents: pauseAnim; resumeEvents: playAnim"
         visible="false">
       </a-sphere>
 
@@ -220,7 +198,8 @@
         height="0.5"
         scale="0.5 0.5 0.5"
         color="#2979ff"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear;
+                   pauseEvents: pauseAnim; resumeEvents: playAnim"
         visible="false">
       </a-cylinder>
 
@@ -231,7 +210,8 @@
         radius-tubular="0.08"
         scale="0.5 0.5 0.5"
         color="#2979ff"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear;
+                   pauseEvents: pauseAnim; resumeEvents: playAnim"
         visible="false">
       </a-torus>
 
@@ -243,20 +223,7 @@
 
   <script>
     var shapes   = ['box', 'sphere', 'cylinder', 'torus'];
-    var spinning = true;   // tracks rotation state
-
-    // ── Helpers ─────────────────────────────────────────
-
-    // Returns the currently visible shape element
-    function currentEl() {
-      for (var i = 0; i < shapes.length; i++) {
-        var el = document.getElementById('shape-' + shapes[i]);
-        if (el.getAttribute('visible') !== false &&
-            el.getAttribute('visible') !== 'false') {
-          return el;
-        }
-      }
-    }
+    var spinning = true;
 
     // ── Shape switcher ───────────────────────────────────
     function showShape(name) {
@@ -268,24 +235,21 @@
         el.setAttribute('visible', isTarget);
         btn.classList.toggle('active', isTarget);
 
-        // Keep rotation paused state in sync on the newly shown shape
+        // When switching to a shape, apply the current spin state to it
+        // using emit — same reliable path as the toggle button uses
         if (isTarget) {
-          el.setAttribute('animation', 'paused', !spinning);
+          el.emit(spinning ? 'playAnim' : 'pauseAnim');
         }
       });
     }
 
-    // ── Colour setter ────────────────────────────────────
+    // ── Colour ───────────────────────────────────────────
     function setColor(hex, swatchEl) {
-      // Update all shapes so switching shape keeps the chosen colour
       shapes.forEach(function(id) {
-        var el = document.getElementById('shape-' + id);
-        // Two-argument setAttribute for multi-property components:
-        // setAttribute('componentName', 'propertyName', value)
-        el.setAttribute('material', 'color', hex);
+        document.getElementById('shape-' + id)
+                .setAttribute('material', 'color', hex);
       });
 
-      // Update swatch highlight — only for the preset swatches (not the input)
       document.querySelectorAll('.swatch').forEach(function(s) {
         s.classList.remove('active');
       });
@@ -294,30 +258,26 @@
       }
     }
 
-    // ── Scale slider ─────────────────────────────────────
+    // ── Scale ────────────────────────────────────────────
     function setScale(val) {
-      // val comes in as a string from the slider, convert to float
       var s = parseFloat(val);
-      // Apply to all shapes so switching shape keeps the chosen size
       shapes.forEach(function(id) {
-        var el = document.getElementById('shape-' + id);
-        // object3D.scale is the fast path recommended by A-Frame docs
-        // for transforms — avoids the setAttribute overhead
-        el.object3D.scale.set(s, s, s);
+        document.getElementById('shape-' + id).object3D.scale.set(s, s, s);
       });
     }
 
     // ── Rotation toggle ──────────────────────────────────
     function toggleRotation() {
       spinning = !spinning;
-      var btn = document.getElementById('rot-btn');
 
       shapes.forEach(function(id) {
-        var el = document.getElementById('shape-' + id);
-        // 'animation' is the component name; 'paused' is the property
-        el.setAttribute('animation', 'paused', !spinning);
+        // emit() goes directly to the animation component's event listener —
+        // it does not go through setAttribute's diff check, so it always fires
+        document.getElementById('shape-' + id)
+                .emit(spinning ? 'playAnim' : 'pauseAnim');
       });
 
+      var btn = document.getElementById('rot-btn');
       btn.textContent = spinning ? '⟳ Spin ON' : '⏸ Spin OFF';
       btn.classList.toggle('spinning', spinning);
     }
